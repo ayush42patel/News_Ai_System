@@ -1,33 +1,37 @@
-from sentence_transformers import SentenceTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from app.models import News
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# Shared vectorizer
+vectorizer = TfidfVectorizer(stop_words="english")
 
-def get_article_embeddings(articles):
-    texts = [a.title + " " + (a.content or "") for a in articles]
-    return model.encode(texts)
 
+def _get_texts(articles):
+    return [a.title + " " + (a.content or "") for a in articles]
+
+
+# 🔹 ARTICLE-TO-ARTICLE RECOMMENDATION
 def recommend_articles(db, article_id, top_k=5):
     articles = db.query(News).all()
 
     if not articles:
         return []
 
-    embeddings = get_article_embeddings(articles)
+    texts = _get_texts(articles)
+    tfidf_matrix = vectorizer.fit_transform(texts)
 
     index_map = {article.id: idx for idx, article in enumerate(articles)}
     if article_id not in index_map:
         return []
 
-    target_index = index_map[article_id]
-    sims = cosine_similarity([embeddings[target_index]], embeddings)[0]
+    target_idx = index_map[article_id]
+    sims = cosine_similarity(tfidf_matrix[target_idx], tfidf_matrix).flatten()
 
-    # sort by similarity
     similar_indices = sims.argsort()[::-1][1:top_k+1]
-
     return [articles[i] for i in similar_indices]
 
+
+# 🔹 USER PERSONALIZED RECOMMENDATION
 def recommend_for_user(db, user_id, top_k=5):
     from app.models import ReadingHistory
 
@@ -38,10 +42,17 @@ def recommend_for_user(db, user_id, top_k=5):
     read_articles = [h.article for h in history]
     all_articles = db.query(News).all()
 
-    user_vec = model.encode([a.title + " " + (a.content or "") for a in read_articles]).mean(axis=0)
-    article_vecs = model.encode([a.title + " " + (a.content or "") for a in all_articles])
+    if not all_articles:
+        return []
 
-    sims = cosine_similarity([user_vec], article_vecs)[0]
+    texts = _get_texts(all_articles)
+    tfidf_matrix = vectorizer.fit_transform(texts)
+
+    # Build user profile vector (average of read article vectors)
+    read_texts = _get_texts(read_articles)
+    user_vec = vectorizer.transform(read_texts).mean(axis=0)
+
+    sims = cosine_similarity(user_vec, tfidf_matrix).flatten()
     top_indices = sims.argsort()[::-1][:top_k]
 
     return [all_articles[i] for i in top_indices]

@@ -5,7 +5,7 @@ psycopg2-binary
 requests
 python-dotenv
 scikit-learn
-sentence-transformers
 passlib[bcrypt]
 python-jose
 joblib
+numpy
