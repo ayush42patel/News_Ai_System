@@ -14,7 +14,7 @@ from app.auth import hash_password, verify_password, create_access_token
 from fastapi import HTTPException
 
 
-Base.metadata.create_all(bind=engine)
+#Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
