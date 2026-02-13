@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, Body
 from sqlalchemy.orm import Session
 import joblib
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.models import ReadingHistory
 from app.auth import get_current_user
@@ -17,6 +18,16 @@ from fastapi import HTTPException
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "https://news-ai-system.onrender.com"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 🔹 LOAD ML MODEL (ADD THIS BLOCK)
 model = joblib.load("app/ml/fake_news_model.pkl")
