@@ -50,6 +50,15 @@ def fetch_news(db: Session = Depends(get_db)):
 def get_news(db: Session = Depends(get_db)):
     return db.query(News).all()
 
+@app.get("/news/{article_id}")
+def get_single_news(article_id: int, db: Session = Depends(get_db)):
+    article = db.query(News).filter(News.id == article_id).first()
+
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    return article
+
 # 🔹 FAKE NEWS PREDICTION API (ADD THIS)
 @app.post("/predict")
 def predict_news(text: str = Body(..., embed=True)):
